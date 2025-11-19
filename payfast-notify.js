@@ -14,7 +14,7 @@ module.exports = async (req, res) => {
     // 1. VALIDATE SIGNATURE
     // We must recreate the signature to ensure this request actually came from PayFast
     // and wasn't faked by a hacker.
-    const pfPassphrase = "AuTiSmPOWeR852"; // MUST match your frontend/PayFast account
+    const pfPassphrase = "AuTiSmPoWeR852"; // MUST match your frontend/PayFast account
     
     let pfOutput = "";
     for (let key in pfData) {
@@ -51,3 +51,4 @@ module.exports = async (req, res) => {
     // If you don't return 200, PayFast will keep retrying the request for days.
     res.status(200).send('OK');
 };
+
