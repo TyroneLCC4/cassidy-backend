@@ -14,12 +14,14 @@ const otps = new Map();
 
 module.exports = async (req, res) => {
     // 1. Set CORS headers (needed for the frontend to communicate with this function)
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    res.setHeader('Access-Control-Allow-Origin', '[https://www.cassidyprime.store](https://www.cassidyprime.store)');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS, DELETE');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
     // Handle OPTIONS pre-flight request
     if (req.method === 'OPTIONS') {
-        return res.status(200).end();
+       res.status(200).send();
+        return;
     }
 
     if (req.method !== 'POST') {
