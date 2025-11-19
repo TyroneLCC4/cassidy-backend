@@ -1,13 +1,15 @@
 {
-  "name": "cassidy-prime-backend",
+  "name": "cassidy-backend",
   "version": "1.0.0",
-  "main": "server.js",
+  "description": "Backend services for Cassidy Prime Tech",
+  "main": "api/send-otp.js", // You can set the main file to any API file, but Vercel still checks for an entrypoint.
   "scripts": {
-    "start": "node server.js"
+    "start": "echo 'Running serverless functions, no start command needed'",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "twilio": "^5.0.0",
-    "dotenv": "^16.3.1"
+    "express": "^4.19.2",
+    "twilio": "^5.2.0"
+    // Add any other packages you need here
   }
 }
