@@ -44,3 +44,9 @@ app.post('/verify-otp', (req, res) => {
 const port = process.env.PORT || 3000;
 
 app.listen(port, () => console.log(`Backend live on port ${port}`));
+
+app.post('/save-vip', (req, res) => {
+  const { phone } = req.body;
+  // Save to Supabase or local DB here
+  res.json({ success: true });
+});
