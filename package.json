@@ -9,6 +9,7 @@
   },
 
   "dependencies": {
+    "firebase-admin": "^13.6.0",
     "firebase": "^10.0.0",
     "twilio": "^5.0.0"
   },
@@ -16,4 +17,5 @@
     "node": "20"
   }
 }
+
 
