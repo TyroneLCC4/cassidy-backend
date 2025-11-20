@@ -1,6 +1,5 @@
-// Updated verify-otp.js
-const { initializeApp } = require("firebase/app");
-const { getFirestore, doc, getDoc, deleteDoc } = require("firebase/firestore");
+// Updated verify-otp.js with Firebase Admin SDK
+const admin = require("firebase-admin");
 const twilio = require("twilio");
 const sgMail = require('@sendgrid/mail');
 
@@ -8,12 +7,17 @@ sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_TOKEN);
 
-const firebaseConfig = {
-  apiKey: process.env.FIREBASE_API_KEY,
-  projectId: process.env.FIREBASE_PROJECT_ID,
-};
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+// Initialize Firebase Admin SDK
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    }),
+  });
+}
+const db = admin.firestore();
 
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "https://www.cassidyprime.store");
@@ -25,13 +29,13 @@ module.exports = async (req, res) => {
 
   try {
     const { contact, otp } = req.body;
-    const recordRef = doc(db, "otps", contact);
-    const recordSnap = await getDoc(recordRef);
+    const recordRef = db.collection("otps").doc(contact);
+    const recordSnap = await recordRef.get();
 
-    if (recordSnap.exists()) {
+    if (recordSnap.exists) {
       const record = recordSnap.data();
       if (record.otp === otp && (Date.now() - record.time) < 300000) {
-        await deleteDoc(recordRef); // remove OTP after successful verification
+        await recordRef.delete(); // remove OTP after successful verification
         
         // Send discount code via the chosen method
         const discountCode = "VIP20OFF";
