@@ -1,79 +1,88 @@
+// api/verify-otp.js
 import twilio from "twilio";
 import sgMail from "@sendgrid/mail";
-// Updated verify-otp.js using Twilio Verify
-const admin = require("firebase-admin");
-const twilio = require("twilio");
-const sgMail = require('@sendgrid/mail');
+import admin from "firebase-admin";
 
+// Initialize SendGrid
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
+// Initialize Twilio
 const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_TOKEN);
 
-// Initialize Firebase Admin SDK (for custom token only)
+// Initialize Firebase Admin (only once)
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert({
       projectId: process.env.FIREBASE_PROJECT_ID,
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
     }),
   });
 }
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
+  // CORS
   res.setHeader("Access-Control-Allow-Origin", "https://www.cassidyprime.store");
-  res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
   if (req.method === "OPTIONS") return res.status(200).end();
-  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed." });
+  if (req.method !== "POST") return res.status(405).end();
 
   try {
     const { contact, otp } = req.body;
+    if (!contact || !otp) {
+      return res.status(400).json({ success: false, error: "Contact and OTP required" });
+    }
 
-    // Verify OTP with Twilio Verify
-    const check = await client.verify.v2.services(process.env.TWILIO_VERIFY_SID).verificationChecks.create({
-      code: otp,
-      to: contact.includes('@') ? contact : (contact.startsWith("+") ? contact : "+27" + contact.replace(/^0/, ""))
+    // Normalize phone number
+    const to = contact.includes("@")
+      ? contact
+      : contact.startsWith("+")
+      ? contact
+      : "+27" + contact.replace(/^0/, "");
+
+    // Verify OTP using Twilio Verify
+    const verificationCheck = await client.verify.v2
+      .services(process.env.TWILIO_VERIFY_SID)
+      .verificationChecks.create({ to, code: otp });
+
+    if (verificationCheck.status !== "approved") {
+      return res.status(401).json({ success: false, error: "Invalid or expired OTP" });
+    }
+
+    // Generate Firebase Custom Token with VIP claim
+    const uid = to.replace(/\D/g, ""); // Simple UID from phone/email
+    const customToken = await admin.auth().createCustomToken(uid, {
+      vip: true,
+      contact: to,
+      verifiedAt: Date.now(),
     });
 
-    if (check.status !== 'approved') {
-      return res.status(401).json({ success: false, error: "Invalid or expired OTP." });
-    }
-
-    // Generate custom Firebase token with claims
-    const uid = contact.replace(/\D/g, ''); // Example: strip non-digits for UID
-    const additionalClaims = {
-      vip: true, // Add VIP claim
-      contact: contact, // Optional: store contact in claims
-      verifiedAt: Date.now()
-    };
-    const customToken = await admin.auth().createCustomToken(uid, additionalClaims);
-
-    // Determine method based on contact format
-    const method = contact.includes('@') ? 'email' : 'whatsapp';
-    const discountCode = "VIP20OFF";
-
     // Send discount code
-    if (method === 'whatsapp') {
-      const twilioPhone = contact.startsWith("+") ? contact : "+27" + contact.replace(/^0/, "");
+    const discountCode = "VIP20OFF";
+    const message = `Congratulations! VIP Verified.\nYour 20% discount code is ${discountCode}\nUse it on your first bulk order at Cassidy Prime.`;
+
+    if (!contact.includes("@")) {
+      // WhatsApp
       await client.messages.create({
-        body: `Congratulations! VIP Verified. Your 20% discount code is ${discountCode} - apply on your first bulk order at Cassidy Prime.`,
+        body: message,
         from: "whatsapp:+14155238886",
-        to: `whatsapp:${twilioPhone}`,
+        to: `whatsapp:${to}`,
       });
-    } else if (method === 'email') {
+    } else {
+      // Email
       await sgMail.send({
         to: contact,
-        from: process.env.SENDGRID_FROM_EMAIL || 'info@cassidyprime.store',
-        subject: 'Your VIP Discount Code for Cassidy Prime',
-        text: `Congratulations! VIP Verified. Your 20% discount code is ${discountCode} - apply on your first bulk order at Cassidy Prime.`,
+        from: process.env.SENDGRID_FROM_EMAIL || "info@cassidyprime.store",
+        subject: "Your VIP Discount Code – Cassidy Prime",
+        text: message,
       });
     }
 
-    return res.status(200).json({ success: true, customToken });
-  } catch (err) {
-    console.error("Verification Error:", err.message);
-    return res.status(500).json({ success: false, error: "Verification failed." });
+    return res.json({ success: true, customToken });
+  } catch (error) {
+    console.error("Verify OTP Error:", error.message);
+    return res.status(500).json({ success: false, error: "Verification failed" });
   }
-};
+}
