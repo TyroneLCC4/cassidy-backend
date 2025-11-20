@@ -1,4 +1,4 @@
-// Updated verify-otp.js with Firebase Admin SDK
+// Updated verify-otp.js with custom claims
 const admin = require("firebase-admin");
 const twilio = require("twilio");
 const sgMail = require('@sendgrid/mail');
@@ -37,6 +37,15 @@ module.exports = async (req, res) => {
       if (record.otp === otp && (Date.now() - record.time) < 300000) {
         await recordRef.delete(); // remove OTP after successful verification
         
+        // Generate custom Firebase token with claims (use contact as UID or map to user)
+        const uid = contact.replace(/\D/g, ''); // Example: strip non-digits for UID
+        const additionalClaims = {
+          vip: true, // Add VIP claim
+          contact: contact, // Optional: store contact in claims
+          verifiedAt: Date.now()
+        };
+        const customToken = await admin.auth().createCustomToken(uid, additionalClaims);
+
         // Send discount code via the chosen method
         const discountCode = "VIP20OFF";
         if (record.method === 'whatsapp') {
@@ -55,7 +64,7 @@ module.exports = async (req, res) => {
           });
         }
 
-        return res.status(200).json({ success: true });
+        return res.status(200).json({ success: true, customToken });
       }
     }
     return res.status(401).json({ success: false, error: "Invalid or expired OTP." });
