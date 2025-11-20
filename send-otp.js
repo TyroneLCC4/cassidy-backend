@@ -20,8 +20,8 @@ module.exports = async (req, res) => {
 
     // Handle OPTIONS pre-flight request
     if (req.method === 'OPTIONS') {
-       res.status(200).send();
-        return;
+        res.status(200).send();
+        return; // Important!
     }
 
     if (req.method !== 'POST') {
