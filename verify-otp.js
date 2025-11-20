@@ -1,15 +1,11 @@
-// api/verify-otp.js
-import twilio from "twilio";
-import sgMail from "@sendgrid/mail";
-import admin from "firebase-admin";
+const twilio = require("twilio");
+const sgMail = require('@sendgrid/mail');
+const admin = require("firebase-admin");
 
-// Initialize SendGrid
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-
-// Initialize Twilio
 const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_TOKEN);
 
-// Initialize Firebase Admin (only once)
+// Initialize Firebase Admin
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.cert({
@@ -20,9 +16,8 @@ if (!admin.apps.length) {
   });
 }
 
-export default async function handler(req, res) {
-  // CORS
-  res.setHeader("Access-Control-Allow-Origin", "https://www.cassidyprime.store");
+module.exports = async (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");  // Allow all for testing
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
@@ -35,14 +30,12 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: "Contact and OTP required" });
     }
 
-    // Normalize phone number
     const to = contact.includes("@")
       ? contact
       : contact.startsWith("+")
       ? contact
       : "+27" + contact.replace(/^0/, "");
 
-    // Verify OTP using Twilio Verify
     const verificationCheck = await client.verify.v2
       .services(process.env.TWILIO_VERIFY_SID)
       .verificationChecks.create({ to, code: otp });
@@ -52,7 +45,7 @@ export default async function handler(req, res) {
     }
 
     // Generate Firebase Custom Token with VIP claim
-    const uid = to.replace(/\D/g, ""); // Simple UID from phone/email
+    const uid = to.replace(/\D/g, "");
     const customToken = await admin.auth().createCustomToken(uid, {
       vip: true,
       contact: to,
@@ -80,9 +73,9 @@ export default async function handler(req, res) {
       });
     }
 
-    return res.json({ success: true, customToken });
+    res.json({ success: true, customToken });
   } catch (error) {
     console.error("Verify OTP Error:", error.message);
-    return res.status(500).json({ success: false, error: "Verification failed" });
+    res.status(500).json({ success: false, error: "Verification failed" });
   }
-}
+};
