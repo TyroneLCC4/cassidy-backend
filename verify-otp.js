@@ -1,3 +1,5 @@
+import twilio from "twilio";
+import sgMail from "@sendgrid/mail";
 // Updated verify-otp.js using Twilio Verify
 const admin = require("firebase-admin");
 const twilio = require("twilio");
