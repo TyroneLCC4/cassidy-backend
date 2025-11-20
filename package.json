@@ -1,21 +1,10 @@
 {
   "name": "cassidy-backend",
   "version": "1.0.0",
-  "description": "Backend services for Cassidy Prime Tech",
-  "main": "api/send-otp.js", 
-  "scripts": {
-    "start": "echo 'Running serverless functions, no start command needed'",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-
+  "type": "module",
   "dependencies": {
-    "firebase-admin": "^13.6.0",
-    "firebase": "^10.0.0",
-    "twilio": "^5.0.0"
-  },
-  "engines": {
-    "node": "20"
+    "twilio": "^5.0.0",
+    "@sendgrid/mail": "^8.1.3",
+    "firebase-admin": "^12.0.0"
   }
 }
-
-
